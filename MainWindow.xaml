@@ -168,7 +168,7 @@
                                        FontWeight="SemiBold"
                                        FontSize="10.5"
                                        Foreground="{DynamicResource K.Accent}">
-                                <Run Text="4.0"/><Run Text=" BETA" Foreground="{DynamicResource K.TextMuted}"/>
+                                <Run Text="4.1"/><Run Text=" BETA" Foreground="{DynamicResource K.TextMuted}"/>
                             </TextBlock>
                         </Border>
 

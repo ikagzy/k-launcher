@@ -33,7 +33,7 @@ public static class LauncherLog
 
                 File.AppendAllText(
                     path,
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} v4.0 [{category}] {message}{Environment.NewLine}");
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} v4.1 [{category}] {message}{Environment.NewLine}");
             }
         }
         catch

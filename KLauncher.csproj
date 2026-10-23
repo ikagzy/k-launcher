@@ -5,10 +5,10 @@
     <UseWPF>true</UseWPF>
     <UseSystemDrawing>true</UseSystemDrawing>
     <Company>itzkagzy</Company>
-    <Version>4.0.1</Version>
-    <AssemblyVersion>4.0.1.0</AssemblyVersion>
-    <FileVersion>4.0.1.0</FileVersion>
-    <InformationalVersion>4.0.1</InformationalVersion>
+    <Version>4.1.0</Version>
+    <AssemblyVersion>4.1.0.0</AssemblyVersion>
+    <FileVersion>4.1.0.0</FileVersion>
+    <InformationalVersion>4.1.0</InformationalVersion>
     <ApplicationIcon>Assets\klauncher.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
@@ -22,6 +22,14 @@
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <TieredPGO>false</TieredPGO>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- the older source copy that lives in this repository must not be compiled into the app -->
+    <Compile Remove="Kagzy-Launcher-Source\**" />
+    <EmbeddedResource Remove="Kagzy-Launcher-Source\**" />
+    <None Remove="Kagzy-Launcher-Source\**" />
+    <Page Remove="Kagzy-Launcher-Source\**" />
+    <Content Remove="Kagzy-Launcher-Source\**" />
+  </ItemGroup>
   <ItemGroup>
     <!-- Memory: let the GC compact more readily so the heap commits less. -->
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
