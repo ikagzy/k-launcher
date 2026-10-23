@@ -1,0 +1,764 @@
+<Window x:Class="KLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:KLauncher"
+        Title="K-LAUNCHER"
+        Width="1180"
+        Height="760"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Window.Resources>
+        <local:ShellIconConverter x:Key="ShellIconConverter"/>
+
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- Theme panel palette rows: quiet surface, sheen on hover, no effects. -->
+        <ControlTemplate x:Key="ThemePaletteButtonTemplate" TargetType="{x:Type Button}">
+            <Grid x:Name="PaletteRoot" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="PaletteScale" ScaleX="1" ScaleY="1"/>
+                </Grid.RenderTransform>
+                <Border x:Name="PaletteButtonBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="8"/>
+                <Border x:Name="PaletteSheen"
+                        CornerRadius="8"
+                        Background="{DynamicResource K.HoverOverlay}"
+                        Opacity="0"/>
+                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="PaletteSheen" Storyboard.TargetProperty="Opacity"
+                                                 To="1" Duration="{StaticResource K.Fast}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="PaletteSheen" Storyboard.TargetProperty="Opacity"
+                                                 To="0" Duration="{StaticResource K.Normal}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="PaletteScale" Storyboard.TargetProperty="ScaleX" To="0.985" Duration="{StaticResource K.Press}"/>
+                                <DoubleAnimation Storyboard.TargetName="PaletteScale" Storyboard.TargetProperty="ScaleY" To="0.985" Duration="{StaticResource K.Press}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="PaletteScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="{StaticResource K.Fast}"/>
+                                <DoubleAnimation Storyboard.TargetName="PaletteScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="{StaticResource K.Fast}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- Square icon buttons in the title bar (info, settings). -->
+        <Style x:Key="TitleIconButton" TargetType="Button" BasedOn="{StaticResource K.Button.Ghost}">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource K.TextMuted}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource K.Text}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Window controls (minimize/close) keep their MouseLeftButtonDown handlers. -->
+        <Style x:Key="WindowControl" TargetType="Border">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource K.TextMuted}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource K.HoverOverlay}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource K.Text}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="WindowCloseControl" TargetType="Border" BasedOn="{StaticResource WindowControl}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource K.DangerSoft}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource K.Danger}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="MainSurface"
+            Background="{DynamicResource K.Bg}"
+            BorderBrush="{DynamicResource K.Outline}"
+            BorderThickness="1"
+            CornerRadius="12">
+
+        <Grid x:Name="MainRoot">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+            </Grid.RowDefinitions>
+
+            <!-- Ambient particles sit behind the content. They never capture input. -->
+            <Canvas x:Name="ParticleCanvas"
+                    Grid.RowSpan="3"
+                    IsHitTestVisible="False"
+                    ClipToBounds="True"/>
+
+            <!-- TOP BAR -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource K.Surface}"
+                    BorderBrush="{DynamicResource K.Outline}"
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+
+                <Grid Margin="18,0,12,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontFamily="Bahnschrift"
+                                   FontWeight="Bold"
+                                   FontSize="21">
+                            <Run Text="K-" Foreground="{DynamicResource K.Accent}"/><Run Text="LAUNCHER" Foreground="{DynamicResource K.Text}"/>
+                        </TextBlock>
+
+                        <Border Margin="10,1,0,0"
+                                VerticalAlignment="Center"
+                                Padding="6,2"
+                                CornerRadius="4"
+                                Background="{DynamicResource K.AccentSoft}">
+                            <TextBlock FontFamily="{DynamicResource K.Font.Display}"
+                                       FontWeight="SemiBold"
+                                       FontSize="10.5"
+                                       Foreground="{DynamicResource K.Accent}">
+                                <Run Text="4.0"/><Run Text=" BETA" Foreground="{DynamicResource K.TextMuted}"/>
+                            </TextBlock>
+                        </Border>
+
+                        <Rectangle Width="1"
+                                   Height="18"
+                                   Margin="14,0,8,0"
+                                   Fill="{DynamicResource K.Outline}"
+                                   VerticalAlignment="Center"/>
+
+                        <Button Content="&#xE946;"
+                                Click="SupportedApplications_Click"
+                                Style="{StaticResource TitleIconButton}"
+                                ToolTip="{Binding [SupportedAppsTooltip], Source={StaticResource Localization}}"/>
+
+                        <Button Content="&#xE713;"
+                                Click="Settings_Click"
+                                Margin="2,0,0,0"
+                                Style="{StaticResource TitleIconButton}"
+                                ToolTip="{Binding [SettingsTooltip], Source={StaticResource Localization}}"/>
+
+                        <Button Content="&#xE70B;"
+                                Click="ReleaseNotes_Click"
+                                Margin="2,0,0,0"
+                                Style="{StaticResource TitleIconButton}"
+                                ToolTip="{Binding [ReleaseNotesTooltip], Source={StaticResource Localization}}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+
+                        <Button Content="{Binding [NiniteButton], Source={StaticResource Localization}}"
+                                Click="NiniteInstall_Click"
+                                ToolTip="{Binding [NiniteTooltip], Source={StaticResource Localization}}"
+                                Style="{StaticResource K.Button.Accent}"
+                                Height="32"
+                                Padding="14,0"
+                                Margin="0,0,8,0"/>
+
+                        <Button Content="{Binding [AddApp], Source={StaticResource Localization}}"
+                                Click="AddApplication_Click"
+                                Style="{StaticResource K.Button.Primary}"
+                                Height="32"
+                                Padding="14,0"
+                                Margin="0,0,14,0"/>
+
+                        <Rectangle Width="1"
+                                   Height="18"
+                                   Margin="0,0,8,0"
+                                   Fill="{DynamicResource K.Outline}"
+                                   VerticalAlignment="Center"/>
+
+                        <Border Style="{StaticResource WindowControl}"
+                                Margin="0,0,2,0"
+                                MouseLeftButtonDown="Minimize_Click">
+                            <TextBlock Text="&#xE921;"
+                                       FontFamily="{StaticResource IconFont}"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+
+                        <Border Style="{StaticResource WindowCloseControl}"
+                                MouseLeftButtonDown="Close_Click">
+                            <TextBlock Text="&#xE8BB;"
+                                       FontFamily="{StaticResource IconFont}"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+
+                    <Border x:Name="MainSearchBorder"
+                            Grid.ColumnSpan="2"
+                            Width="36"
+                            Height="34"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource K.Control}"
+                            BorderBrush="{DynamicResource K.Outline}"
+                            BorderThickness="1"
+                            CornerRadius="9"
+                            ClipToBounds="True"
+                            Panel.ZIndex="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="32"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0"
+                                    Width="32"
+                                    Height="32"
+                                    Padding="0"
+                                    Style="{StaticResource K.Button.Ghost}"
+                                    Content="&#xE721;"
+                                    FontFamily="{StaticResource IconFont}"
+                                    FontWeight="Normal"
+                                    FontSize="14"
+                                    Foreground="{DynamicResource K.TextMuted}"
+                                    ToolTip="{Binding [SearchAppsHint], Source={StaticResource Localization}}"
+                                    Click="MainSearchButton_Click"/>
+
+                            <Grid Grid.Column="1">
+                                <TextBox x:Name="MainSearchBox"
+                                         Height="30"
+                                         Margin="0"
+                                         Padding="2,0"
+                                         Background="Transparent"
+                                         Foreground="{DynamicResource K.Text}"
+                                         CaretBrush="{DynamicResource K.Accent}"
+                                         BorderThickness="0"
+                                         FontSize="13"
+                                         VerticalContentAlignment="Center"
+                                         Visibility="Collapsed"
+                                         TextChanged="MainSearchBox_TextChanged"
+                                         KeyDown="MainSearchBox_KeyDown"/>
+                                <TextBlock x:Name="MainSearchHint"
+                                           Text="{Binding [SearchAppsHint], Source={StaticResource Localization}}"
+                                           Foreground="{DynamicResource K.TextFaint}"
+                                           FontSize="12.5"
+                                           VerticalAlignment="Center"
+                                           Margin="4,0,0,0"
+                                           IsHitTestVisible="False"
+                                           Visibility="Collapsed"/>
+                            </Grid>
+
+                            <Button x:Name="MainSearchCloseButton"
+                                    Grid.Column="2"
+                                    Content="&#xE711;"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Style="{StaticResource K.Button.Ghost}"
+                                    FontFamily="{StaticResource IconFont}"
+                                    FontWeight="Normal"
+                                    FontSize="10"
+                                    Visibility="Collapsed"
+                                    Click="MainSearchCloseButton_Click"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- APPS (grid) -->
+            <ScrollViewer x:Name="GridAppsScrollViewer"
+                          Grid.Row="1"
+                          VerticalScrollBarVisibility="Hidden"
+                          HorizontalScrollBarVisibility="Disabled"
+                          CanContentScroll="False"
+                          PanningMode="VerticalOnly"
+                          Background="Transparent">
+
+                <ItemsControl ItemsSource="{Binding Apps}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Margin="20"
+                                       HorizontalAlignment="Center"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="184"
+                                    Height="150"
+                                    Margin="8"
+                                    Tag="AppCard"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    Cursor="Hand"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Loaded="AppCard_Loaded"
+                                    MouseEnter="Card_MouseEnter"
+                                    MouseLeave="Card_MouseLeave"
+                                    MouseRightButtonDown="Card_MouseRightButtonDown"
+                                    MouseLeftButtonUp="Card_MouseLeftButtonUp"
+                                    MouseRightButtonUp="Card_MouseRightButtonUp">
+
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource K.Card}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource K.Outline}"/>
+                                    </Style>
+                                </Border.Style>
+                                <Border.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="96"/>
+                                        <RowDefinition Height="28"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Hover: a soft accent wash and ring fade in under the content. -->
+                                    <Border Tag="CardHover"
+                                            Grid.RowSpan="3"
+                                            Margin="-1"
+                                            CornerRadius="12"
+                                            Background="{DynamicResource K.AccentSoft}"
+                                            BorderBrush="{DynamicResource K.AccentLine}"
+                                            BorderThickness="1"
+                                            Opacity="0"
+                                            IsHitTestVisible="False"/>
+
+                                    <Grid Grid.Row="0" Margin="0,8,0,0">
+                                        <TextBlock Text="{Binding FallbackGlyph}"
+                                                   Foreground="{DynamicResource K.Accent}"
+                                                   FontFamily="{DynamicResource K.Font.Display}"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Source, ElementName=AppIcon}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <Image x:Name="AppIcon"
+                                               Width="64"
+                                               Height="64"
+                                               Stretch="Uniform"
+                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Source="{Binding IconPath,
+                                                        Converter={StaticResource ShellIconConverter}}"/>
+                                    </Grid>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="{Binding LocalizedName}"
+                                               Foreground="{DynamicResource K.Text}"
+                                               FontFamily="{DynamicResource K.Font.UI}"
+                                               FontSize="13.5"
+                                               FontWeight="SemiBold"
+                                               Margin="12,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="{Binding [CardMenuHint], Source={StaticResource Localization}}"
+                                               Foreground="{DynamicResource K.TextFaint}"
+                                               FontSize="10"
+                                               Margin="12,0,12,6"
+                                               TextTrimming="CharacterEllipsis"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- LIST INTERFACE: applications on the left, selected app content on the right -->
+            <Grid x:Name="ListInterfacePanel"
+                  Grid.Row="1"
+                  Background="Transparent"
+                  Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="48"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="ListAppsColumn" Width="1*"/>
+                    <ColumnDefinition x:Name="ListDetailsColumn" Width="0"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Row="0"
+                        Grid.Column="0"
+                        Background="{DynamicResource K.Surface}"
+                        BorderBrush="{DynamicResource K.Outline}"
+                        BorderThickness="0,0,1,1"
+                        Padding="12,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="ListBatchSelectButton"
+                                Grid.Column="0"
+                                Content="{Binding [BatchSelect], Source={StaticResource Localization}}"
+                                Click="ListBatchSelectButton_Click"
+                                Height="30"
+                                MinWidth="64"
+                                Margin="0,0,6,0"
+                                Padding="12,0"
+                                Style="{StaticResource K.Button.Secondary}"/>
+                        <Button x:Name="ListBatchLaunchButton"
+                                Grid.Column="1"
+                                Content="{Binding [LaunchSelected], Source={StaticResource Localization}}"
+                                Click="ListBatchLaunchButton_Click"
+                                Height="30"
+                                MinWidth="140"
+                                Margin="0,0,6,0"
+                                Padding="12,0"
+                                Style="{StaticResource K.Button.Primary}"/>
+                        <Button x:Name="ListBatchCancelButton"
+                                Grid.Column="2"
+                                Content="{Binding [CancelSelection], Source={StaticResource Localization}}"
+                                Click="ListBatchCancelButton_Click"
+                                Height="30"
+                                MinWidth="64"
+                                Padding="12,0"
+                                Style="{StaticResource K.Button.Danger}"
+                                Visibility="Collapsed"/>
+                        <TextBlock x:Name="ListBatchSelectionStatus"
+                                   Grid.Column="3"
+                                   Foreground="{DynamicResource K.TextFaint}"
+                                   FontSize="11"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Right"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="8,0,4,0"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="0"
+                        Grid.Row="1"
+                        Background="{DynamicResource K.Surface}"
+                        BorderBrush="{DynamicResource K.Outline}"
+                        BorderThickness="0,0,1,0">
+                    <ScrollViewer x:Name="ListAppsScrollViewer"
+                                  VerticalScrollBarVisibility="Hidden"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False"
+                                  PanningMode="VerticalOnly">
+                        <ItemsControl ItemsSource="{Binding Apps}" Margin="0,6,0,8">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="RowRoot"
+                                            Height="54"
+                                            Margin="10,3,10,0"
+                                            Tag="AppCard"
+                                            CornerRadius="9"
+                                            BorderThickness="1"
+                                            Cursor="Hand"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            MouseEnter="ListApp_MouseEnter"
+                                            MouseLeave="ListApp_MouseLeave"
+                                            MouseLeftButtonUp="ListApp_MouseLeftButtonUp"
+                                            MouseRightButtonUp="ListApp_MouseRightButtonUp">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                        </Border.RenderTransform>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{DynamicResource K.Card}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource K.Outline}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsBatchSelected}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource K.AccentSoft}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource K.AccentLine}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                        <Border x:Name="RowHover"
+                                                CornerRadius="8"
+                                                Background="{DynamicResource K.HoverOverlay}"
+                                                Opacity="0"
+                                                IsHitTestVisible="False"/>
+                                        <Grid Margin="10,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="40"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="26"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Grid Width="32"
+                                                  Height="32"
+                                                  HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding FallbackGlyph}"
+                                                           Foreground="{DynamicResource K.Accent}"
+                                                           FontFamily="{DynamicResource K.Font.Display}"
+                                                           FontSize="13"
+                                                           FontWeight="Bold"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Source, ElementName=ListAppIcon}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <Image x:Name="ListAppIcon"
+                                                       Width="32"
+                                                       Height="32"
+                                                       Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       Source="{Binding IconPath,
+                                                                Converter={StaticResource ShellIconConverter}}"/>
+                                            </Grid>
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding LocalizedName}"
+                                                       Foreground="{DynamicResource K.Text}"
+                                                       FontFamily="{DynamicResource K.Font.UI}"
+                                                       FontSize="13.5"
+                                                       FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"
+                                                       Margin="10,0,6,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+
+                                            <Path Grid.Column="2"
+                                                  Data="M0,5 L3.5,8.5 L10,1.5"
+                                                  Stroke="{DynamicResource K.Accent}"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center">
+                                                <Path.Style>
+                                                    <Style TargetType="Path">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBatchSelected}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Path.Style>
+                                            </Path>
+
+                                            <Path Grid.Column="3"
+                                                  Data="M0,0 L4.5,4.5 L0,9"
+                                                  Stroke="{DynamicResource K.TextFaint}"
+                                                  StrokeThickness="1.6"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  VerticalAlignment="Center"
+                                                  Margin="6,0,4,0"/>
+                                        </Grid>
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <Trigger SourceName="RowRoot" Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="RowHover" Storyboard.TargetProperty="Opacity"
+                                                                         To="1" Duration="{StaticResource K.Fast}"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="RowHover" Storyboard.TargetProperty="Opacity"
+                                                                         To="0" Duration="{StaticResource K.Normal}"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+
+                <Border x:Name="ListDetailsPanel"
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Background="Transparent"
+                        Padding="22,0,0,0"
+                        Visibility="Collapsed">
+                    <Border.RenderTransform>
+                        <TranslateTransform X="-48"/>
+                    </Border.RenderTransform>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="72"/>
+                            <RowDefinition Height="56"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0"
+                                BorderBrush="{DynamicResource K.Outline}"
+                                BorderThickness="0,0,0,1"
+                                Padding="0,0,22,0">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="ListDetailsTitle"
+                                           Text="{Binding [InterfaceListHeader], Source={StaticResource Localization}}"
+                                           Foreground="{DynamicResource K.Text}"
+                                           FontFamily="{DynamicResource K.Font.Display}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="ListDetailsSubtitle"
+                                           Text="{Binding [InterfaceListSelectHint], Source={StaticResource Localization}}"
+                                           Foreground="{DynamicResource K.TextMuted}"
+                                           FontSize="12"
+                                           Margin="0,3,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="1"
+                                BorderBrush="{DynamicResource K.Outline}"
+                                BorderThickness="0,0,0,1"
+                                Padding="0,4,22,4">
+                            <ScrollViewer x:Name="ListDetailsActionsScrollViewer"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          PanningMode="HorizontalOnly"
+                                          CanContentScroll="False"
+                                          PreviewMouseWheel="ListDetailsActionsScrollViewer_OnPreviewMouseWheel">
+                                <StackPanel x:Name="ListDetailsActionsHost"
+                                            Orientation="Horizontal"/>
+                            </ScrollViewer>
+                        </Border>
+
+                        <Grid Grid.Row="2">
+                            <StackPanel x:Name="ListDetailsEmptyState"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Margin="28">
+                                <TextBlock x:Name="ListDetailsEmptyText"
+                                           Text="{Binding [InterfaceListEmpty], Source={StaticResource Localization}}"
+                                           Foreground="{DynamicResource K.TextFaint}"
+                                           FontSize="12.5"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="280"/>
+                            </StackPanel>
+
+                            <ScrollViewer x:Name="ListDetailsScrollViewer"
+                                          Visibility="Collapsed"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          CanContentScroll="False"
+                                          PanningMode="VerticalOnly">
+                                <WrapPanel x:Name="ListDetailsItemsHost"
+                                           Margin="0,18,20,24"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- FOOTER -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource K.Surface}"
+                    BorderBrush="{DynamicResource K.Outline}"
+                    BorderThickness="0,1,0,0">
+
+                <Grid Margin="18,0">
+                    <TextBlock Text="{Binding [FooterHint], Source={StaticResource Localization}}"
+                               Foreground="{DynamicResource K.TextFaint}"
+                               FontSize="11"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Text="Made by itzkagzy"
+                               Foreground="{DynamicResource K.TextFaint}"
+                               FontSize="11"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- Startup intro animation overlay -->
+            <Canvas x:Name="IntroOverlay"
+                    Grid.RowSpan="3"
+                    Panel.ZIndex="100"
+                    Background="{DynamicResource K.Bg}"
+                    ClipToBounds="True"
+                    IsHitTestVisible="False"/>
+        </Grid>
+    </Border>
+</Window>

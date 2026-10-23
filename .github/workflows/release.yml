@@ -1,0 +1,50 @@
+# Put this file in the K-Launcher repository as .github/workflows/release.yml.
+# Set CSPROJ to where KLauncher.csproj lives in that repository.
+#
+# Publishing a new K-Launcher version:
+#   git tag v4.1.0
+#   git push origin v4.1.0
+# GitHub builds the single-file KLauncher.exe and attaches it (plus its SHA-256 file) to a release.
+# K-Series then offers the update. The exe installs itself the way the itch.io download does.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CSPROJ: KLauncher.csproj   # e.g. Kagzy-Launcher-Source/KLauncher.csproj if the project sits in a subfolder
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish self-contained single-file exe
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          if ($version -notmatch '^\d+(\.\d+){1,2}$') { throw "Tag '$version' is not a version number" }
+          dotnet publish $env:CSPROJ -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:IncludeAllContentForSelfExtract=true -p:DebugType=None `
+            -p:Version=$version -p:AssemblyVersion="$version.0" -p:FileVersion="$version.0" `
+            -p:InformationalVersion=$version -o dist
+          $hash = (Get-FileHash dist/KLauncher.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  KLauncher.exe" | Set-Content dist/KLauncher.exe.sha256 -Encoding ascii
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/KLauncher.exe
+            dist/KLauncher.exe.sha256

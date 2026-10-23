@@ -52,3 +52,7 @@ Structure: Modular services, models, and view models
 License
 This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
 Developed by itzkagzy. Free to use, modify, and distribute as long as all derivative works remain open-source under the same license. See LICENSE[cite: 3] for the full license text.
+
+## Releases
+
+Every tag like `v4.0.1` is built by GitHub Actions (`.github/workflows/release.yml`) and published on the Releases page as `KLauncher.exe` with its SHA-256 file. K-Series uses these releases to update K-Launcher. The itch.io page stays the main download.
